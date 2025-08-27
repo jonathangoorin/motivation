@@ -6,6 +6,7 @@ var $$ = document.querySelectorAll.bind(document);
 var App = function($el){
   this.$el = $el;
   this.load();
+  this.loadColors();
 
   this.$el.addEventListener(
     'submit', this.submit.bind(this)
@@ -16,6 +17,8 @@ var App = function($el){
   } else {
     this.renderChoose();
   }
+  
+  this.initSettings();
 };
 
 App.fn = App.prototype;
@@ -31,6 +34,40 @@ App.fn.save = function(){
   if (this.dob)
     localStorage.dob = this.dob.getTime();
 };
+
+App.fn.resetBirthday = function(){
+  // Clear the running age counter interval
+  if (this.interval) {
+    clearInterval(this.interval);
+    this.interval = null;
+  }
+  
+  localStorage.removeItem('dob');
+  this.dob = null;
+  this.renderChoose();
+};
+
+App.fn.loadColors = function(){
+  var colors = JSON.parse(localStorage.getItem('motivationColors')) || {
+    bgColor: '#ffffff',
+    textColor: '#494949'
+  };
+  
+  this.applyColors(colors);
+};
+
+App.fn.saveColors = function(colors){
+  localStorage.setItem('motivationColors', JSON.stringify(colors));
+};
+
+App.fn.applyColors = function(colors){
+  document.documentElement.style.setProperty('--bg-color', colors.bgColor);
+  document.documentElement.style.setProperty('--text-color', colors.textColor);
+  document.documentElement.style.setProperty('--label-color', colors.textColor);
+  document.documentElement.style.setProperty('--accent-color', colors.textColor);
+};
+
+
 
 App.fn.submit = function(e){
   e.preventDefault();
@@ -75,8 +112,77 @@ App.fn.html = function(html){
 };
 
 App.fn.view = function(name){
-  var $el = $(name + '-template');
-  return Handlebars.compile($el.innerHTML);
+  if (name === 'dob') {
+    return function() {
+      return `
+        <form>
+          <h1 id="dob" class="age-label">When were you born?</h1>
+          <footer>
+            <input type="date" name="dob" id="dob">
+            <button type="submit">Motivate</button>
+          </footer>
+        </form>
+      `;
+    };
+  } else if (name === 'age') {
+    return function(data) {
+      return `
+        <h1 class="age-label">AGE</h1>
+        <h2 class="count">${data.year}<sup>.${data.milliseconds}</sup></h2>
+      `;
+    };
+  }
+};
+
+App.fn.initSettings = function(){
+  var self = this;
+  var settingsToggle = document.getElementById('settingsToggle');
+  var settingsPanel = document.getElementById('settingsPanel');
+  var colorInputs = ['bgColor', 'textColor'];
+  
+  // Toggle settings panel
+  settingsToggle.addEventListener('click', function(){
+    settingsPanel.classList.toggle('show');
+  });
+  
+  // Close settings when clicking outside
+  document.addEventListener('click', function(e){
+    if (!settingsPanel.contains(e.target) && !settingsToggle.contains(e.target)) {
+      settingsPanel.classList.remove('show');
+    }
+  });
+  
+  // Color picker changes
+  colorInputs.forEach(function(inputId){
+    var input = document.getElementById(inputId);
+    var colors = JSON.parse(localStorage.getItem('motivationColors')) || {
+      bgColor: '#ffffff',
+      textColor: '#494949'
+    };
+    
+    input.addEventListener('change', function(){
+      colors[inputId] = this.value;
+      self.applyColors(colors);
+      self.saveColors(colors);
+    });
+  });
+  
+  // Reset birthday button
+  var resetButton = document.getElementById('resetBirthday');
+  resetButton.addEventListener('click', function(){
+    self.resetBirthday();
+    settingsPanel.classList.remove('show');
+  });
+  
+  // Set initial color picker values
+  var currentColors = JSON.parse(localStorage.getItem('motivationColors')) || {
+    bgColor: '#ffffff',
+    textColor: '#494949'
+  };
+  colorInputs.forEach(function(inputId){
+    var input = document.getElementById(inputId);
+    input.value = currentColors[inputId];
+  });
 };
 
 window.app = new App($('app'))
