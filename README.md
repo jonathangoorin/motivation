@@ -55,4 +55,4 @@ A beautiful Chrome extension that replaces your new tab page with a motivation d
 This project is open source and available under the MIT License.
 
 
-![](screenshot.png)
+![](screenshot-1280x800.png)
